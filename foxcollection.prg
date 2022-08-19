@@ -1,3 +1,9 @@
+If Type('_vfp.ftHelper') = 'U'
+	AddProperty(_vfp, 'ftHelper', .Null.)
+EndIf
+
+_vfp.ftHelper = CreateObject('AnyToString')
+
 && ======================================================================== &&
 && ftNewArray
 && ======================================================================== &&
@@ -10,6 +16,13 @@ Endfunc
 && ======================================================================== &&
 Function ftNewMap
 	Return Createobject('TDictionary')
+Endfunc
+
+&& ======================================================================== &&
+&& ftNewStringList
+&& ======================================================================== &&
+Function ftNewStringList
+	Return Createobject('TStringList')
 Endfunc
 
 && ======================================================================== &&
@@ -66,7 +79,7 @@ Define Class TDictionary As TIterable
 		Return This.CreatePair(lvKey, lvValue)
 	Endfunc
 
-	Function getLen
+	Function GetLen
 		Return This.Items.Count
 	Endfunc
 
@@ -76,7 +89,36 @@ Define Class TDictionary As TIterable
 		AddProperty(loPair, 'key', tvKey)
 		AddProperty(loPair, 'value', tvValue)
 		Return loPair
-	Endfunc
+	EndFunc
+
+	Function ToString		
+		If this.GetLen() > 0
+			Local lcStr, i
+			lcStr = '{'
+			For i = 1 to this.GetLen()
+				If Len(lcStr) = 1 then
+					lcStr = lcStr + _vfp.ftHelper.ToString(this.items.getkey(i)) + ':' + this.ObjToString(this.items.item(i))
+				Else
+					lcStr = lcStr + ',' + _vfp.ftHelper.ToString(this.items.getkey(i)) + ':' + this.ObjToString(this.items.item(i))
+				EndIf				
+			EndFor
+			lcStr = lcStr + '}'
+			Return lcStr
+		Else
+			Return '{}'
+		EndIf
+	EndFunc
+	
+	Function ObjToString(toObj)
+		Local lcStr
+		lcStr = Space(1)
+		Try
+			lcStr = toObj.ToString()
+		Catch
+			lcStr = _vfp.ftHelper.ToString(toObj)
+		EndTry
+		Return lcStr
+	EndFunc
 
 Enddefine
 
@@ -85,38 +127,38 @@ Enddefine
 * ============================================================ *
 Define Class TArray As TIterable
 	Dimension aCustomArray[1]
-
+	nIndex = 0
+	
 	Function Init
 		DoDefault()
 	Endfunc
 
 	Function Push(tvItem)
-		Local lnIndex
-		lnIndex = This.getLen() + 1
-		Dimension This.aCustomArray[lnIndex]
-		This.aCustomArray[lnIndex] = tvItem
+		this.nIndex = this.nIndex + 1
+		Dimension This.aCustomArray[this.nIndex]
+		This.aCustomArray[this.nIndex] = tvItem
 	Endfunc
 
 	Function Pop
-		Local lnIndex
-		lnIndex = This.getLen()
-		If lnIndex = 0
+		this.nIndex = this.nIndex - 1
+		If this.nIndex <= 0
+			this.nIndex = 0
+			Dimension this.aCustomArray[1]
 			Return
 		Endif
 
-		lnIndex = lnIndex - 1
-		Dimension This.aCustomArray[lnIndex]
+		Dimension This.aCustomArray[this.nIndex]
 	Endfunc
 
 	Function Get(tnIndex)
-		If Between(tnIndex, 1, This.getLen())
+		If Between(tnIndex, 1, This.GetLen())
 			Return This.aCustomArray[tnIndex]
 		Endif
 		Return .Null.
 	Endfunc
 
 	Function Set(tnIndex, tvValue)
-		If Between(tnIndex, 1, This.getLen())
+		If Between(tnIndex, 1, This.GetLen())
 			This.aCustomArray[tnIndex] = tvValue
 		Endif
 	Endfunc
@@ -125,9 +167,70 @@ Define Class TArray As TIterable
 		Return This.aCustomArray[this.nIteratorCounter]
 	Endfunc
 
-	Function getLen
-		Return Alen(This.aCustomArray, 1)
+	Function GetLen
+		Return this.nIndex		
 	Endfunc
+
+	Function ToString
+		If this.nIndex > 0
+			Acopy(this.aCustomArray, laData)
+			Return _vfp.ftHelper.ToString(@laData)
+		Else
+			Return '[]'
+		EndIf
+	Endfunc
+
+Enddefine
+
+* ============================================================ *
+* TStringList
+* ============================================================ *
+Define Class TStringList As TIterable
+	Dimension aCustomArray[1]
+	nIndex = 0
+	
+	Function Init
+		DoDefault()
+	Endfunc
+
+	Function Add(tcItem)
+		If Type('tcItem') != 'C'
+			Return
+		EndIf
+		this.nIndex = this.nIndex + 1
+		Dimension This.aCustomArray[this.nIndex]
+		This.aCustomArray[this.nIndex] = tcItem
+	Endfunc
+
+	Function GetDataByIndex
+		Return This.aCustomArray[this.nIteratorCounter]
+	Endfunc
+
+	Function GetLen
+		Return this.nIndex
+	Endfunc
+
+	Function ToString
+		Return this.Join()
+	EndFunc
+	
+	Function Join(tcSep)
+		If this.nIndex > 0
+			Local lcStr, i, lcVal
+			lcStr = Space(1)
+			For i = 1 to this.GetLen()
+				lcVal = this.aCustomArray[i]
+				If i = 1 then
+					lcStr = lcVal
+				Else
+					lcStr = lcStr + Iif(!Empty(tcSep), tcSep + lcVal, lcVal)
+				EndIf				
+			EndFor
+			Return lcStr
+		Else
+			Return ''
+		EndIf
+	EndFunc
 
 Enddefine
 
@@ -143,7 +246,7 @@ Define Class TIterable As Custom
 	Endfunc
 
 	Function hasNext
-		If This.nIteratorCounter > This.getLen() Then
+		If This.nIteratorCounter > This.GetLen() Then
 			This.nIteratorCounter = 0
 			Return .F.
 		Endif
@@ -161,12 +264,16 @@ Define Class TIterable As Custom
 		* abstract
 	Endfunc
 
-	Function getLen
+	Function GetLen
 		* abstract
 	Endfunc
 
 	Function Len_Access
-		Return This.getLen()
+		Return This.GetLen()
+	Endfunc
+
+	Function ToString
+
 	Endfunc
 
 Enddefine
@@ -345,5 +452,211 @@ Define Class TQueue As Custom
 			lvPeek = This.aQueueList[1]
 		Endif
 		Return lvPeek
+	Endfunc
+Enddefine
+
+* AnyToString
+Define Class AnyToString As Custom
+	#Define USER_DEFINED_PEMS	'U'
+	#Define ALL_MEMBERS			"PHGNUCIBR"
+	lCentury = .F.
+	cDateAct = ''
+	nOrden   = 0
+	cFlags 	 = ''
+
+	Function Init
+		This.lCentury = Set("Century") == "OFF"
+		This.cDateAct = Set("Date")
+		Set Century On
+		Set Date Ansi
+		Mvcount = 60000
+	Endfunc
+
+	Function ToString(toRefObj, tcFlags)
+		lPassByRef = .T.
+		Try
+			External Array toRefObj
+		Catch
+			lPassByRef = .F.
+		Endtry
+		This.cFlags = Evl(tcFlags, ALL_MEMBERS)
+		If lPassByRef
+			Return This.AnyToStr(@toRefObj)
+		Else
+			Return This.AnyToStr(toRefObj)
+		Endif
+	Endfunc
+
+	Function AnyToStr As Memo
+		Lparameters tValue As variant
+		Try
+			External Array tValue
+		Catch
+		Endtry
+		Do Case
+		Case Type("tValue", 1) = 'A'
+			Local k, j, lcArray
+			If Alen(tValue, 2) == 0
+				*# Unidimensional array
+				lcArray = '['
+				For k = 1 To Alen(tValue)
+					lcArray = lcArray + Iif(Len(lcArray) > 1, ',', '')
+					Try
+						=Acopy(tValue[k], aLista)
+						lcArray = lcArray + This.AnyToStr(@aLista)
+					Catch
+						lcArray = lcArray + This.AnyToStr(tValue[k])
+					Endtry
+				Endfor
+				lcArray = lcArray + ']'
+			Else
+				*# Multidimensional array support
+				lcArray = '['
+				For k = 1 To Alen(tValue, 1)
+					lcArray = lcArray + Iif(Len(lcArray) > 1, ',', '')
+
+					* # begin of rows
+					lcArray = lcArray + '['
+					For j = 1 To Alen(tValue, 2)
+						If j > 1
+							lcArray = lcArray + ','
+						Endif
+						Try
+							=Acopy(tValue[k, j], aLista)
+							lcArray = lcArray + This.AnyToStr(@aLista)
+						Catch
+							lcArray = lcArray + This.AnyToStr(tValue[k, j])
+						Endtry
+					Endfor
+					lcArray = lcArray + ']'
+					* # end of rows
+				Endfor
+				lcArray = lcArray + ']'
+			Endif
+			Return lcArray
+
+		Case Vartype(tValue) = 'O'
+			Local j, lcStr, lnTot
+			Local Array gaMembers(1)
+
+			lcStr = '{'
+			lnTot = Amembers(gaMembers, tValue, 0, This.cFlags)
+			For j=1 To lnTot
+				lcProp = Lower(Alltrim(gaMembers[j]))
+				lcStr = lcStr + Iif(Len(lcStr) > 1, ',', '') + '"' + lcProp + '":'
+				Try
+					=Acopy(tValue. &gaMembers[j], aCopia)
+					lcStr = lcStr + This.AnyToStr(@aCopia)
+				Catch
+					Try
+						lcStr = lcStr + This.AnyToStr(tValue. &gaMembers[j])
+					Catch
+						lcStr = lcStr + "{}"
+					Endtry
+				Endtry
+			Endfor
+
+			*//> Collection based class object support
+			llIsCollection = .F.
+			Try
+				llIsCollection = (tValue.BaseClass == "Collection" And tValue.Class == "Collection" And tValue.Name == "Collection")
+			Catch
+			Endtry
+			If llIsCollection
+				lcComma   = Iif(Right(lcStr, 1) != '{', ',', '')
+				lcStr = lcStr + lcComma + '"Collection":['
+				For i=1 To tValue.Count
+					lcStr = lcStr + Iif(i>1,',','') + This.AnyToStr(tValue.Item(i))
+				Endfor
+				lcStr = lcStr + ']'
+			Endif
+			*//> Collection based class object support
+
+			lcStr = lcStr + '}'
+			Return lcStr
+		Otherwise
+			Return This.GetValue(tValue, Vartype(tValue))
+		Endcase
+	Endfunc
+
+	Function Destroy
+		If This.lCentury
+			Set Century Off
+		Endif
+		lcDateAct = This.cDateAct
+		Set Date &lcDateAct
+	Endfunc
+
+	Function GetValue As String
+		Lparameters tcvalue As String, tctype As Character
+		Do Case
+		Case tctype $ "CDTBGMQVWX"
+			Do Case
+			Case tctype = "D"
+				tcvalue = '"' + Strtran(Dtoc(tcvalue), ".", "-") + '"'
+			Case tctype = "T"
+				tcvalue = '"' + Strtran(Ttoc(tcvalue), ".", "-") + '"'
+			Otherwise
+				If tctype = "X"
+					tcvalue = "null"
+				Else
+					tcvalue = This.getstring(tcvalue)
+				Endif
+			Endcase
+			tcvalue = Alltrim(tcvalue)
+		Case tctype $ "YFIN"
+			tcvalue = Strtran(Transform(tcvalue), ',', '.')
+		Case tctype = "L"
+			tcvalue = Iif(tcvalue, "true", "false")
+		Endcase
+		Return tcvalue
+	Endfunc
+
+	Function getstring As String
+		Lparameters tcString As String, tlParseUtf8 As Boolean
+		tcString = Allt(tcString)
+		tcString = Strtran(tcString, '\', '\\' )
+		tcString = Strtran(tcString, Chr(9),  '\t' )
+		tcString = Strtran(tcString, Chr(10), '\n' )
+		tcString = Strtran(tcString, Chr(13), '\r' )
+		tcString = Strtran(tcString, '"', '\"' )
+
+		If tlParseUtf8
+			tcString = Strtran(tcString,"&","\u0026")
+			tcString = Strtran(tcString,"+","\u002b")
+			tcString = Strtran(tcString,"-","\u002d")
+			tcString = Strtran(tcString,"#","\u0023")
+			tcString = Strtran(tcString,"%","\u0025")
+			tcString = Strtran(tcString,"²","\u00b2")
+			tcString = Strtran(tcString,'à','\u00e0')
+			tcString = Strtran(tcString,'á','\u00e1')
+			tcString = Strtran(tcString,'è','\u00e8')
+			tcString = Strtran(tcString,'é','\u00e9')
+			tcString = Strtran(tcString,'ì','\u00ec')
+			tcString = Strtran(tcString,'í','\u00ed')
+			tcString = Strtran(tcString,'ò','\u00f2')
+			tcString = Strtran(tcString,'ó','\u00f3')
+			tcString = Strtran(tcString,'ù','\u00f9')
+			tcString = Strtran(tcString,'ú','\u00fa')
+			tcString = Strtran(tcString,'ü','\u00fc')
+			tcString = Strtran(tcString,'À','\u00c0')
+			tcString = Strtran(tcString,'Á','\u00c1')
+			tcString = Strtran(tcString,'È','\u00c8')
+			tcString = Strtran(tcString,'É','\u00c9')
+			tcString = Strtran(tcString,'Ì','\u00cc')
+			tcString = Strtran(tcString,'Í','\u00cd')
+			tcString = Strtran(tcString,'Ò','\u00d2')
+			tcString = Strtran(tcString,'Ó','\u00d3')
+			tcString = Strtran(tcString,'Ù','\u00d9')
+			tcString = Strtran(tcString,'Ú','\u00da')
+			tcString = Strtran(tcString,'Ü','\u00dc')
+			tcString = Strtran(tcString,'ñ','\u00f1')
+			tcString = Strtran(tcString,'Ñ','\u00d1')
+			tcString = Strtran(tcString,'©','\u00a9')
+			tcString = Strtran(tcString,'®','\u00ae')
+			tcString = Strtran(tcString,'ç','\u00e7')
+		Endif
+
+		Return '"' +tcString + '"'
 	Endfunc
 Enddefine
