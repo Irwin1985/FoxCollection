@@ -1,5 +1,11 @@
 # FoxCollection
-Es una librería que alberga varios tipos de datos compuestos de uso diario. 
+Es una librería que alberga los siguientes tipos de datos.
+
+- Arrays
+- StringList
+- Diccionarios
+- Pilas
+- Colas
 
 ```
 Agrega FoxCollection.prg en cualquier carpeta que tenga visibilidad desde tu PATH.
@@ -63,6 +69,20 @@ Do While loDict.HasNext()
 	loPair = loDict.Next() && Next devuelve un objeto tipo Pair (key, value)
 	? "Key: ", loPair.Key, " Value: ", loPair.Value
 Enddo
+```
+
+## Ejemplo de StringList
+Un StringList es basicamente un array dinámico con la diferencia que solo admite valores de tipo strings.
+```xBase
+laFrutas = ftNewStringList()
+
+laFrutas.Add('Mandarina')
+laFrutas.Add('Mango')
+laFrutas.Add('Piña')
+
+? laFrutas.ToString() // imprime: "MandarinaMangoPiña"
+? laFrutas.Join(', ') // imprime: "Mandarina, Mango, Piña"
+
 ```
 
 ## Ejemplo de Pila (Stack)
