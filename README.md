@@ -1,6 +1,7 @@
 # FoxCollection
 Es una librería que alberga los siguientes tipos de datos.
 
+- Strings
 - Arrays
 - StringList
 - Diccionarios
@@ -41,6 +42,23 @@ Do While laFrutas.hasNext()
 	lcFruta = laFrutas.Next() && devuelve el siguiente elemento
 	? lcFruta
 Enddo
+```
+
+## Ejemplo de String
+```xBase
+  lcString = ftNewString("Pepito, Juanito, Vicente, Guillermo")
+  laWords = lcString.Split(',') // retorna array con las palabras delimitadas
+  ?Alen(laWords)
+  
+  ?lcString.StartsWith('Pepito') // imprime .T.
+  
+  lcString2 = ftNewString("Pepito")
+  ?lcString.Equals(lcString2) // imprime .T.
+  ?lcString.Equals("Pepito") // imprime .T.
+  ?lcString.StartsWith("Pep") // imprime .T.
+  ?lcString.EndsWith("Guillermo") // imprime .T.
+  ?lcString.Head(5) // imprime "Pepit"
+  ?lcString.Tail(5) // imprime "lermo"
 ```
 
 ## Ejemplo de Diccionario
