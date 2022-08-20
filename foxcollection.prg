@@ -5,6 +5,16 @@ EndIf
 _vfp.ftHelper = CreateObject('AnyToString')
 
 && ======================================================================== &&
+&& ftNewString
+&& ======================================================================== &&
+Function ftNewString(tcValue)
+	If Pcount() = 1
+		Return CreateObject('TString', tcValue)
+	EndIf
+	Return CreateObject('TString')		
+EndFunc
+
+&& ======================================================================== &&
 && ftNewArray
 && ======================================================================== &&
 Function ftNewArray
@@ -659,4 +669,281 @@ Define Class AnyToString As Custom
 
 		Return '"' +tcString + '"'
 	Endfunc
-Enddefine
+EndDefine
+
+Define Class TString as TObject
+
+	Dimension aWords[1]
+	Function init(tcStartValue)
+		If Pcount() = 1
+			If Type('tcStartValue') == 'C'
+				this.Value = tcStartValue
+			Else
+				Error 'Invalid data type for string.'
+			EndIf
+		Else
+			this.Value = Space(1)
+		EndIf
+	EndFunc
+	
+	Function EqualsIgnoreCase(tvObject)
+		Do case
+		case Type('tvObject') == Type('this.value')
+			Return Lower(tvObject) == Lower(this.value)
+		Case Type('tvObject') == 'O' and Type('tvObject.Name') == 'C' and tvObject.Name == this.Name
+			Return Lower(tvObject.Value) == Lower(this.value)
+		endcase					
+		Return .f.
+	EndFunc	
+	
+	Function Head(tnSpaces)
+		Return Left(this.value, tnSpaces)
+	EndFunc
+	
+	Function Tail(tnSpaces)
+		Return Right(this.value, tnSpaces)
+	EndFunc
+	
+	Function padl(tnSize, tcPadCharacters)
+		Return Padl(this.value, tnSize, tcPadCharacters)
+	EndFunc
+		
+	Function padr(tnSize, tcPadCharacters)
+		Return Padr(this.value, tnSize, tcPadCharacters)
+	EndFunc
+	
+	Function WordCount(tcDelimiter)
+		Return GetWordCount(this.value, tcDelimiter)
+	EndFunc
+	
+	Function Split(tcDelimiter)
+		Local tcWord, i
+		For i = 1 to GetWordCount(this.value, tcDelimiter)
+			Dimension this.aWords[i]
+			this.aWords[i] = GetWordNum(this.value, i, tcDelimiter)
+		EndFor
+		Return @this.aWords
+	EndFunc
+	
+	Function StartsWith(tvObject)
+		Do case
+		case Type('tvObject') == 'C'
+			Return Left(this.value, Len(tvObject)) == tvObject
+		Case Type('tvObject') == 'O' and Type('tvObject.name') == 'C' and Lower(tvObject.Name) == 'tstring'
+			Return Left(this.value, Len(tvObject.Value)) == tvObject.Value
+		endcase
+		Return .F.
+	endfunc
+
+	Function EndsWith(tvObject)
+		Do case
+		case Type('tvObject') == 'C'
+			Return Right(this.value, Len(tvObject)) == tvObject
+		Case Type('tvObject') == 'O' and Type('tvObject.name') == 'C' and Lower(tvObject.Name) == 'tstring'
+			Return Right(this.value, Len(tvObject.Value)) == tvObject.Value
+		endcase
+		Return .F.
+	endfunc
+
+	Function IndexOf(tcChar)
+		Return at(this.value, tcChar)
+	EndFunc
+	
+	Function LastIndexOf(tcChar)
+		Local lnIndex, lnPos, lnOccur
+		lnPos = 0
+		lnOccur = 0
+		Do while .t.
+			lnOccur = lnOccur + 1
+			lnIndex = At(tcChar, this.value, lnOccur)
+			If lnIndex > lnPos
+				lnPos = lnIndex
+			Else
+				exit
+			EndIf
+		EndDo
+		Return lnPos
+	endfunc
+	
+	Function Range(tnLow, tnHigh)
+		Return Substr(this.value, tnLow, tnHigh)
+	EndFunc
+	
+	Function Substring(tnStart, tnEnd)
+		Do case
+		case Pcount() = 1
+			Return Substr(this.value, tnStart, Len(this.value))
+		Case Pcount() = 2
+			Return this.range(tnStart, tnEnd)
+		EndCase
+		Return Space(1)
+	endfunc		
+	
+	Function Concat(tvObject)
+		Do case
+		case Type('tvObject') == 'C'
+			Return this.value + tvObject
+		Case Type('tvObject') == 'O' and Type('tvObject.name') == 'C' and Lower(tvObject.Name) == 'tstring'
+			Return this.value + tvObject.Value
+		endcase
+		Return Space(1)
+	EndFunc
+	
+	Function Replace(tcOldChar, tcNewChar)
+		Return Strtran(this.value, tcOldChar, tcNewChar)
+	EndFunc
+	
+	Function Matches(tvObject)
+		Local loRegEx, lcValue, lbResult
+		loRegEx = createobject("VBScript.RegExp")
+		loRegEx.IgnoreCase = .t.
+		loRegEx.global = .t.
+
+		Do case
+		case Type('tvObject') == 'C'
+			lcValue = tvObject
+		Case Type('tvObject') == 'O' and Type('tvObject.name') == 'C' and Lower(tvObject.Name) == 'tstring'
+			lcValue = tvObject.Value
+		EndCase
+		
+		If !Empty(lcValue)
+			loRegEx.pattern = tcPattern
+			lbResult = loRegEx.test(lcValue)
+		EndIf
+		Release loRegEx
+		
+		Return lbResult
+	EndFunc
+	
+	Function Contains(tvObject)
+		Do case
+		case Type('tvObject') == 'C'
+			Return tvObject $ this.value
+		Case Type('tvObject') == 'O' and Type('tvObject.name') == 'C' and Lower(tvObject.Name) == 'tstring'
+			Return tvObject.Value $ this.value
+		endcase
+		Return .F.
+	EndFunc
+	
+	Function ReplaceFirst(tvObject, tcReplacement)
+		Do case
+		case Type('tvObject') == 'C'
+			Return Strtran(this.value, tvObject, tcReplacement, 1)
+		Case Type('tvObject') == 'O' and Type('tvObject.name') == 'C' and Lower(tvObject.Name) == 'tstring'
+			Return Strtran(this.value, tvObject.Value, tcReplacement, 1)
+		endcase
+		Return Space(1)
+	EndFunc
+	
+	Function ReplaceAll(tvObject, tcReplacement)
+		Do case
+		case Type('tvObject') == 'C'					
+			Return Strtran(this.value, tvObject, tcReplacement)
+		Case Type('tvObject') == 'O' and Type('tvObject.name') == 'C' and Lower(tvObject.Name) == 'tstring'
+			Return Strtran(this.value, tvObject.Value, tcReplacement)
+		endcase
+		Return Space(1)
+	EndFunc
+	
+	Function ToLowerCase
+		Return Lower(this.value)
+	EndFunc
+	
+	Function ToUpperCase
+		Return Upper(this.value)
+	EndFunc
+	
+	Function ToProperCase
+		Return Proper(This.value)
+	EndFunc
+	
+	Function Trim
+		Return Alltrim(this.value)
+	EndFunc
+	
+	Function Strip
+		Return Alltrim(This.Value)
+	endfunc	
+	
+	Function StripLeading
+		Return Ltrim(this.value)
+	EndFunc
+	
+	Function StripTrailing
+		Return Rtrim(This.Value)
+	EndFunc
+	
+	Function IsBlank
+		Return Empty(this.value)
+	EndFunc 
+	
+	Function Lines
+		Local tcWord, i, lcValue
+		lcValue = Strtran(this.value, Chr(10))
+		For i = 1 to GetWordCount(lcValue, Chr(13))
+			Dimension this.aWords[i]
+			this.aWords[i] = GetWordNum(lcValue, i, Chr(13))
+		EndFor
+		Return @this.aWords
+	EndFunc	
+	
+	Function Reverse
+		Local lcValue, i
+		lcValue = ''
+		For i = Len(Alltrim(this.value)) to 1 step -1
+			lcValue = lcValue + Substr(this.value, i, 1)
+		EndFor
+		
+		Return lcValue
+	EndFunc	
+	
+EndDefine
+
+Define Class TNumber as TObject
+	Function init(tnStartValue)
+		If Pcount() = 1
+			If Type('tnStartValue') == 'N'
+				this.Value = tnStartValue
+			Else
+				Error 'Invalid data type for Integer.'
+			EndIf
+		Else
+			this.Value = 0.0
+		EndIf
+	EndFunc	
+	
+	Function GetInteger
+		Return Int(this.value)
+	EndFunc
+		
+enddefine
+
+
+Define Class TObject as Custom
+	Value = .Null.
+	Function ToString
+		Return Transform(this.Value)
+	EndFunc
+	
+	Function type
+		Return Type('this.Value')
+	EndFunc	
+	
+	Function len
+		Return Len(this.value)
+	EndFunc
+	
+	Function IsEmpty
+		Return Empty(this.value)
+	EndFunc
+	
+	Function Equals(tvObject)
+		Do case
+		case Type('tvObject') == Type('this.value')
+			Return tvObject == this.value
+		Case Type('tvObject') == 'O' and Type('tvObject.Name') == 'C' and tvObject.Name == this.Name
+			Return tvObject.Value == this.value
+		endcase					
+		Return .f.
+	EndFunc
+enddefine
